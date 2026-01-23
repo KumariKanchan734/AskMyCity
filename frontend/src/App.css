@@ -1,34 +1,57 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* Clean and minimal styling for AskMyCity */
+
+.App {
+  min-height: 100vh;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+/* Remove any text-align center that might disrupt reading flow */
+body {
+  text-align: left;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+/* Smooth transitions for interactive elements */
+button {
+  transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-.App-link {
-    color: #61dafb;
+button:active {
+  transform: scale(0.98);
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Select dropdown custom styling */
+select:focus,
+input:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Card hover effects */
+.hover\:shadow-md:hover {
+  transition: box-shadow 0.2s ease;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Ensure proper spacing and readability */
+* {
+  box-sizing: border-box;
+}
+
+/* Link styling for phone numbers */
+a[href^="tel:"] {
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a[href^="tel:"]:hover {
+  text-decoration: underline;
 }

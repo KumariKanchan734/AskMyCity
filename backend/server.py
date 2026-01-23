@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,8 +6,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
+from typing import List, Optional
 from datetime import datetime, timezone
 
 
@@ -27,44 +26,106 @@ api_router = APIRouter(prefix="/api")
 
 
 # Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
+class City(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    name: str
+    slug: str
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class Service(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    city_slug: str
+    service_type: str
+    contact: str
+    description: str
 
-# Add your routes to the router instead of directly to app
+class CityWithServices(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    name: str
+    slug: str
+    services: List[Service]
+
+
+# Seed database with initial data
+async def seed_database():
+    """
+    Pre-populate the database with cities and services if they don't exist
+    """
+    # Check if cities already exist
+    cities_count = await db.cities.count_documents({})
+    
+    if cities_count == 0:
+        # Insert cities
+        cities_data = [
+            {"name": "Delhi", "slug": "delhi"},
+            {"name": "Mumbai", "slug": "mumbai"},
+            {"name": "Bangalore", "slug": "bangalore"}
+        ]
+        await db.cities.insert_many(cities_data)
+        
+        # Insert services for each city
+        services_data = [
+            # Delhi services
+            {"city_slug": "delhi", "service_type": "Emergency", "contact": "112", "description": "National Emergency Number for all emergencies"},
+            {"city_slug": "delhi", "service_type": "Hospital", "contact": "102", "description": "CATS Ambulance Service - 24/7 emergency medical assistance"},
+            {"city_slug": "delhi", "service_type": "Police", "contact": "100", "description": "Delhi Police Emergency Helpline"},
+            {"city_slug": "delhi", "service_type": "Helpline", "contact": "1091", "description": "Women's Safety Helpline - 24/7 support for women in distress"},
+            
+            # Mumbai services
+            {"city_slug": "mumbai", "service_type": "Emergency", "contact": "112", "description": "National Emergency Number for all emergencies"},
+            {"city_slug": "mumbai", "service_type": "Hospital", "contact": "108", "description": "Ambulance Service - Free emergency medical assistance"},
+            {"city_slug": "mumbai", "service_type": "Police", "contact": "100", "description": "Mumbai Police Emergency Helpline"},
+            {"city_slug": "mumbai", "service_type": "Helpline", "contact": "1098", "description": "Child Helpline - Support for children in need"},
+            
+            # Bangalore services
+            {"city_slug": "bangalore", "service_type": "Emergency", "contact": "112", "description": "National Emergency Number for all emergencies"},
+            {"city_slug": "bangalore", "service_type": "Hospital", "contact": "108", "description": "Ambulance Service - 24/7 emergency medical assistance"},
+            {"city_slug": "bangalore", "service_type": "Police", "contact": "100", "description": "Bangalore City Police Emergency Helpline"},
+            {"city_slug": "bangalore", "service_type": "Helpline", "contact": "080-22943225", "description": "Bangalore One Citizen Service Center"},
+        ]
+        await db.services.insert_many(services_data)
+        
+        logging.info("Database seeded with cities and services")
+
+
+# API Routes
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    """Health check endpoint"""
+    return {"message": "AskMyCity API is running"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
+@api_router.get("/cities", response_model=List[City])
+async def get_cities():
+    """
+    Fetch all available cities
+    """
+    cities = await db.cities.find({}, {"_id": 0}).to_list(100)
+    return cities
+
+
+@api_router.get("/cities/{city_slug}", response_model=CityWithServices)
+async def get_city_services(city_slug: str):
+    """
+    Fetch city details and all services for a specific city
+    """
+    # Check if city exists
+    city = await db.cities.find_one({"slug": city_slug}, {"_id": 0})
     
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
+    if not city:
+        raise HTTPException(status_code=404, detail=f"City '{city_slug}' not found")
     
-    return status_checks
+    # Fetch services for the city
+    services = await db.services.find({"city_slug": city_slug}, {"_id": 0}).to_list(100)
+    
+    return {
+        "name": city["name"],
+        "slug": city["slug"],
+        "services": services
+    }
+
 
 # Include the router in the main app
 app.include_router(api_router)
@@ -83,6 +144,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+@app.on_event("startup")
+async def startup_db():
+    """Seed database on startup"""
+    await seed_database()
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
