@@ -3,16 +3,24 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Phone, MapPin, AlertCircle } from "lucide-react";
+import { ArrowLeft, Phone, MapPin, AlertCircle, Map } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const serviceIcons = {
-  Emergency: "🚨",
-  Hospital: "🏥",
-  Police: "👮",
-  Helpline: "📞"
+  "Emergency": "🚨",
+  "Police": "👮",
+  "Hospital": "🏥",
+  "Ambulance": "🚑",
+  "Fire Station": "🚒",
+  "Women Helpline": "👩",
+  "Child Helpline": "👶",
+  "Tourist Helpline": "🗺️",
+  "Municipal Office": "🏛️",
+  "Electricity Emergency": "⚡",
+  "Water Supply": "💧",
+  "Disaster Management": "🌪️"
 };
 
 const CityPage = () => {
@@ -73,7 +81,7 @@ const CityPage = () => {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-blue-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Button
             onClick={() => navigate("/")}
             variant="ghost"
@@ -89,29 +97,32 @@ const CityPage = () => {
               <h1 className="text-3xl font-semibold text-blue-900" data-testid="city-name">
                 {cityData?.name}
               </h1>
-              <p className="text-blue-700">Essential City Services</p>
+              <div className="flex items-center text-blue-700 mt-1">
+                <Map className="h-4 w-4 mr-1" />
+                <p className="text-sm" data-testid="state-name">{cityData?.state_name}</p>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       {/* Services Grid */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Available Services</h2>
-          <p className="text-gray-600">Quick access to emergency and essential services in {cityData?.name}</p>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Essential Services ({cityData?.services?.length || 0})</h2>
+          <p className="text-gray-600">Emergency and essential services available in {cityData?.name}</p>
         </div>
 
         {cityData?.services && cityData.services.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-testid="services-grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="services-grid">
             {cityData.services.map((service, index) => (
-              <Card key={index} className="border-blue-100 shadow-sm hover:shadow-md transition-shadow" data-testid={`service-card-${service.service_type.toLowerCase()}`}>
+              <Card key={index} className="border-blue-100 shadow-sm hover:shadow-md transition-shadow" data-testid={`service-card-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
                       <span className="text-4xl">{serviceIcons[service.service_type] || "📋"}</span>
                       <div>
-                        <CardTitle className="text-xl text-gray-900" data-testid={`service-type-${service.service_type.toLowerCase()}`}>
+                        <CardTitle className="text-lg text-gray-900" data-testid={`service-type-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}>
                           {service.service_type}
                         </CardTitle>
                       </div>
@@ -119,15 +130,15 @@ const CityPage = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-gray-600 mb-4" data-testid={`service-description-${service.service_type.toLowerCase()}`}>
+                  <CardDescription className="text-gray-600 text-sm mb-4" data-testid={`service-description-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}>
                     {service.description}
                   </CardDescription>
                   <div className="flex items-center space-x-2 bg-blue-50 p-3 rounded-lg">
-                    <Phone className="h-5 w-5 text-blue-600" />
+                    <Phone className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <a
                       href={`tel:${service.contact}`}
-                      className="text-blue-700 font-semibold text-lg hover:text-blue-800"
-                      data-testid={`service-contact-${service.service_type.toLowerCase()}`}
+                      className="text-blue-700 font-semibold text-base hover:text-blue-800 break-all"
+                      data-testid={`service-contact-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       {service.contact}
                     </a>
@@ -149,8 +160,8 @@ const CityPage = () => {
             <div>
               <h3 className="font-semibold text-blue-900 mb-1">Important Information</h3>
               <p className="text-blue-800 text-sm">
-                For life-threatening emergencies, always dial the national emergency number (112) immediately.
-                The information provided here is for reference purposes.
+                For life-threatening emergencies, always dial <strong>112</strong> (National Emergency Number) immediately.
+                The information provided here is for reference purposes. Some contact numbers may vary by city.
               </p>
             </div>
           </div>
