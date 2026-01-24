@@ -86,8 +86,44 @@ class AskMyCityAPITester:
             }
         )
 
-    def test_get_cities(self):
-        """Test getting all cities"""
+    def test_get_states(self):
+        """Test getting all states"""
+        success, response = self.run_test(
+            "Get All States",
+            "GET",
+            "api/states",
+            200,
+            expected_data_checks={
+                'is_list': lambda data: isinstance(data, list),
+                'has_36_states': lambda data: len(data) == 36,
+                'has_required_fields': lambda data: all('name' in state and 'slug' in state for state in data),
+                'has_maharashtra': lambda data: any(state['slug'] == 'maharashtra' for state in data),
+                'has_karnataka': lambda data: any(state['slug'] == 'karnataka' for state in data),
+                'has_tamil_nadu': lambda data: any(state['slug'] == 'tamil-nadu' for state in data),
+                'alphabetically_sorted': lambda data: data == sorted(data, key=lambda x: x['name'])
+            }
+        )
+        return success, response
+
+    def test_get_cities_by_state(self, state_slug, expected_cities):
+        """Test getting cities for a specific state"""
+        success, response = self.run_test(
+            f"Get Cities for {state_slug}",
+            "GET",
+            f"api/cities?state={state_slug}",
+            200,
+            expected_data_checks={
+                'is_list': lambda data: isinstance(data, list),
+                'has_expected_count': lambda data: len(data) >= len(expected_cities),
+                'has_required_fields': lambda data: all('name' in city and 'slug' in city and 'state_slug' in city for city in data),
+                'correct_state': lambda data: all(city['state_slug'] == state_slug for city in data),
+                'has_expected_cities': lambda data: all(city_slug in [city['slug'] for city in data] for city_slug in expected_cities)
+            }
+        )
+        return success, response
+
+    def test_get_all_cities(self):
+        """Test getting all cities (no state filter)"""
         success, response = self.run_test(
             "Get All Cities",
             "GET",
@@ -95,9 +131,8 @@ class AskMyCityAPITester:
             200,
             expected_data_checks={
                 'is_list': lambda data: isinstance(data, list),
-                'has_three_cities': lambda data: len(data) == 3,
-                'has_required_fields': lambda data: all('name' in city and 'slug' in city for city in data),
-                'has_expected_cities': lambda data: set(city['slug'] for city in data) == {'delhi', 'mumbai', 'bangalore'}
+                'has_many_cities': lambda data: len(data) >= 90,
+                'has_required_fields': lambda data: all('name' in city and 'slug' in city and 'state_slug' in city for city in data)
             }
         )
         return success, response
