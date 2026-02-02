@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { ArrowLeft, Phone, MapPin, AlertCircle, Map } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -30,11 +30,7 @@ const CityPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchCityServices();
-  }, [citySlug]);
-
-  const fetchCityServices = async () => {
+  const fetchCityServices = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -50,7 +46,11 @@ const CityPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [citySlug, navigate]);
+
+  useEffect(() => {
+    fetchCityServices();
+  }, [fetchCityServices]);
 
   if (loading) {
     return (
@@ -116,33 +116,41 @@ const CityPage = () => {
         {cityData?.services && cityData.services.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="services-grid">
             {cityData.services.map((service, index) => (
-              <Card key={index} className="border-blue-100 shadow-sm hover:shadow-md transition-shadow" data-testid={`service-card-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}>
-                <CardHeader>
+              <Card
+                key={index}
+                className="group border border-blue-100 shadow-sm hover:shadow-xl transition-all duration-300 bg-white hover:-translate-y-1 overflow-hidden"
+                data-testid={`service-card-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <div className="h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+                <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-4xl">{serviceIcons[service.service_type] || "📋"}</span>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-4xl p-3 bg-blue-50 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                        {serviceIcons[service.service_type] || "📋"}
+                      </div>
                       <div>
-                        <CardTitle className="text-lg text-gray-900" data-testid={`service-type-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <CardTitle className="text-lg font-bold text-gray-900 leading-tight" data-testid={`service-type-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}>
                           {service.service_type}
                         </CardTitle>
+                        <p className="text-xs font-medium text-blue-500 mt-1 uppercase tracking-wider">Available 24/7</p>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-gray-600 text-sm mb-4" data-testid={`service-description-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}>
+                  <CardDescription className="text-gray-600 text-sm mb-6 line-clamp-2" data-testid={`service-description-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}>
                     {service.description}
                   </CardDescription>
-                  <div className="flex items-center space-x-2 bg-blue-50 p-3 rounded-lg">
-                    <Phone className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <a
-                      href={`tel:${service.contact}`}
-                      className="text-blue-700 font-semibold text-base hover:text-blue-800 break-all"
-                      data-testid={`service-contact-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      {service.contact}
-                    </a>
-                  </div>
+
+                  <a
+                    href={`tel:${service.contact}`}
+                    className="flex items-center justify-center space-x-3 w-full bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-blue-600 text-blue-700 hover:text-white p-3 rounded-xl transition-all duration-300 group-hover:shadow-md active:scale-95"
+                    data-testid={`service-contact-${service.service_type.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Phone className="h-5 w-5 animate-pulse" />
+                    <span className="font-bold text-lg">{service.contact}</span>
+                    <span className="text-xs font-normal opacity-70 ml-1">(Tap to Call)</span>
+                  </a>
                 </CardContent>
               </Card>
             ))}
